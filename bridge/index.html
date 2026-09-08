@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VoxSales — AI Sales Cockpit</title>
+  <style>
+    :root {
+      --bg: #0b0f19;
+      --panel: #0f1525;
+      --panel-2: #111a2e;
+      --border: rgba(255,255,255,0.08);
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --accent: #60a5fa;
+      --success: #22c55e;
+      --danger: #ef4444;
+      --warn: #f59e0b;
+      --live: #ef4444;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0));
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .logo {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #1d4ed8, #2563eb);
+      display: grid;
+      place-items: center;
+      font-weight: 700;
+      color: white;
+      border: 1px solid rgba(255,255,255,0.12);
+    }
+    .title { font-weight: 600; letter-spacing: 0.2px; }
+    .subtitle { color: var(--muted); font-size: 12px; }
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #6b7280;
+    }
+    .dot.live { background: var(--live); box-shadow: 0 0 10px rgba(239,68,68,0.45); }
+    .dot.success { background: var(--success); box-shadow: 0 0 10px rgba(34,197,94,0.45); }
+    .dot.warn { background: var(--warn); }
+
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      justify-content: flex-start;
+      padding: 24px;
+    }
+    .stage {
+      width: 100%;
+      max-width: 1100px;
+      display: none;
+      animation: fadeIn 220ms ease;
+    }
+    .stage.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px);} to { opacity: 1; transform: translateY(0);} }
+
+    .card {
+      background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0));
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 22px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.35);
+    }
+    .center { text-align: center; }
+    .hero-icon {
+      width: 72px; height: 72px; border-radius: 50%;
+      background: linear-gradient(135deg, #1d4ed8, #2563eb);
+      display: grid; place-items: center;
+      margin: 0 auto 14px;
+      font-size: 30px;
+      border: 1px solid rgba(255,255,255,0.14);
+      box-shadow: 0 0 22px rgba(96,165,250,0.35);
+    }
+    h1 { font-size: 22px; margin: 0 0 6px; }
+    .lead-name { font-size: 18px; font-weight: 600; margin-top: 6px; }
+    .meta { color: var(--muted); font-size: 13px; }
+    .primary-btn {
+      margin-top: 16px;
+      padding: 12px 16px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: #0f2a3f;
+      color: #e5e7eb;
+      font-weight: 600;
+      cursor: pointer;
+      min-width: 180px;
+    }
+    .primary-btn:hover { filter: brightness(1.1); }
+    .danger-btn {
+      margin-top: 16px;
+      padding: 12px 16px;
+      border-radius: 12px;
+      border: 1px solid rgba(239,68,68,0.25);
+      background: #3b1217;
+      color: #fca5a5;
+      font-weight: 600;
+      cursor: pointer;
+      min-width: 180px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 260px 1fr 300px;
+      gap: 14px;
+    }
+    .panel {
+      background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0));
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
+    }
+    .panel h3 {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--muted);
+      margin: 0 0 10px;
+    }
+    .kv { display: flex; justify-content: space-between; gap: 8px; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 13px; }
+    .kv:last-child { border-bottom: none; }
+    .kv .k { color: var(--muted); }
+    .kv .v { font-weight: 600; text-align: right; }
+
+    .conversation {
+      height: 360px;
+      overflow: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .bubble {
+      max-width: 82%;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.04);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+    .bubble.ai { align-self: flex-start; background: rgba(96,165,250,0.10); border-color: rgba(96,165,250,0.20); }
+    .bubble.prospect { align-self: flex-end; background: rgba(255,255,255,0.04); }
+    .bubble .speaker { font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+
+    .controls {
+      margin-top: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .timer { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+    .summary-card {
+      background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0));
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
+    }
+    .summary-card .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); }
+    .summary-card .value { font-size: 22px; font-weight: 700; margin-top: 6px; }
+    .summary-card .sub { color: var(--muted); font-size: 12px; margin-top: 4px; }
+
+    @media (max-width: 980px) {
+      .grid { grid-template-columns: 1fr; }
+      .summary-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <div class="logo">V</div>
+      <div>
+        <div class="title">VoxSales</div>
+        <div class="subtitle">AI Sales Agent · Powered by AssemblyAI</div>
+      </div>
+    </div>
+    <div class="status-pill">
+      <span id="statusDot" class="dot"></span>
+      <span id="headerStatus">Idle</span>
+    </div>
+  </header>
+
+  <main>
+    <!-- INCOMING -->
+    <section id="incoming" class="stage active">
+      <div class="card center">
+        <div class="hero-icon">📞</div>
+        <h1>Incoming AI Sales Call</h1>
+        <div class="meta">A prospect is waiting for the AI sales agent.</div>
+        <div class="lead-name" id="incomingName">Oussema Toumi</div>
+        <div class="meta" id="incomingCompany">Demo Company</div>
+        <div class="meta" id="incomingProduct">Interested in: VoxSales Professional</div>
+        <button class="primary-btn" id="answerBtn">Answer Call</button>
+      </div>
+    </section>
+
+    <!-- LIVE -->
+    <section id="live" class="stage">
+      <div class="grid">
+        <div class="panel">
+          <h3>Customer</h3>
+          <div class="kv"><span class="k">Name</span><span class="v" id="liveName">Oussema Toumi</span></div>
+          <div class="kv"><span class="k">Company</span><span class="v" id="liveCompany">Demo Company</span></div>
+          <div class="kv"><span class="k">Role</span><span class="v">Founder</span></div>
+          <div class="kv"><span class="k">Interest</span><span class="v" id="liveProduct">VoxSales Professional</span></div>
+          <div class="kv"><span class="k">Assigned</span><span class="v">Sarah</span></div>
+        </div>
+        <div class="panel">
+          <h3>Live Conversation</h3>
+          <div id="conversation" class="conversation"></div>
+          <div class="controls">
+            <div class="timer" id="timer">00:00</div>
+            <button class="danger-btn" id="endBtn">End Call</button>
+          </div>
+        </div>
+        <div class="panel">
+          <h3>Sales Intelligence</h3>
+          <div class="kv"><span class="k">Intent</span><span class="v" id="siIntent">Analyzing…</span></div>
+          <div class="kv"><span class="k">Qualification</span><span class="v" id="siQual">Analyzing…</span></div>
+          <div class="kv"><span class="k">Buying Signal</span><span class="v" id="siSignal">Analyzing…</span></div>
+          <div class="kv"><span class="k">Objection</span><span class="v" id="siObjection">—</span></div>
+          <div class="kv"><span class="k">Sentiment</span><span class="v" id="siSentiment">Analyzing…</span></div>
+          <div class="kv"><span class="k">Sales Score</span><span class="v" id="siScore">—</span></div>
+          <div class="kv"><span class="k">Next Action</span><span class="v" id="siNext">—</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- COMPLETED -->
+    <section id="completed" class="stage">
+      <div class="card center">
+        <div class="hero-icon">✅</div>
+        <h1>Call Completed</h1>
+        <div class="meta">Post-call sales intelligence has been generated.</div>
+        <div class="summary-grid" style="margin-top:18px; text-align:left;">
+          <div class="summary-card">
+            <div class="label">Sales Score</div>
+            <div class="value" id="sumScore">—</div>
+            <div class="sub" id="sumScoreSub">High potential</div>
+          </div>
+          <div class="summary-card">
+            <div class="label">Customer Intent</div>
+            <div class="value" id="sumIntent">—</div>
+            <div class="sub" id="sumIntentSub">Purchase interest</div>
+          </div>
+          <div class="summary-card">
+            <div class="label">Next Action</div>
+            <div class="value" id="sumNext">—</div>
+            <div class="sub" id="sumNextSub">Recommended follow-up</div>
+          </div>
+        </div>
+        <button class="primary-btn" id="newCallBtn">New Demo</button>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const $ = id => document.getElementById(id);
+    const setHeader = (text, mode='') => {
+      $('headerStatus').textContent = text;
+      $('statusDot').className = 'dot ' + mode;
+    };
+    const show = id => {
+      document.querySelectorAll('.stage').forEach(s => s.classList.remove('active'));
+      const target = document.getElementById(id);
+      if (target) target.classList.add('active');
+    };
+    const elapsed = () => {
+      const s = Math.floor((Date.now() - startTime)/1000);
+      return `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
+    };
+
+    let ws = null;
+    let startTime = null;
+    let timerHandle = null;
+
+    // PCM Audio Output Player with Instant Barge-In / Flush
+    class PcmPlayer {
+      constructor(sampleRate = 24000) {
+        this.sampleRate = sampleRate;
+        this.audioCtx = null;
+        this.nextTime = 0;
+        this.activeSources = [];
+      }
+      init() {
+        if (!this.audioCtx) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          this.audioCtx = new AudioCtx({ sampleRate: this.sampleRate });
+        }
+        if (this.audioCtx.state === 'suspended') {
+          this.audioCtx.resume();
+        }
+      }
+      playBase64(base64Data) {
+        if (!base64Data) return;
+        this.init();
+        try {
+          const binary = atob(base64Data);
+          const sampleCount = Math.floor(binary.length / 2);
+          if (sampleCount === 0) return;
+          const float32 = new Float32Array(sampleCount);
+          for (let i = 0; i < sampleCount; i++) {
+            const b0 = binary.charCodeAt(i * 2);
+            const b1 = binary.charCodeAt(i * 2 + 1);
+            let int16 = b0 | (b1 << 8);
+            if (int16 >= 0x8000) int16 -= 0x10000;
+            float32[i] = int16 / 32768.0;
+          }
+          const buffer = this.audioCtx.createBuffer(1, sampleCount, this.sampleRate);
+          buffer.copyToChannel(float32, 0);
+
+          const source = this.audioCtx.createBufferSource();
+          source.buffer = buffer;
+          source.connect(this.audioCtx.destination);
+
+          const now = this.audioCtx.currentTime;
+          if (this.nextTime < now) {
+            this.nextTime = now;
+          }
+          source.start(this.nextTime);
+          this.nextTime += buffer.duration;
+
+          this.activeSources.push(source);
+          source.onended = () => {
+            const idx = this.activeSources.indexOf(source);
+            if (idx !== -1) this.activeSources.splice(idx, 1);
+          };
+        } catch (e) {
+          console.error('[PcmPlayer] Play error:', e);
+        }
+      }
+      flush() {
+        // Cut off all audio output immediately when user speaks (Barge-in)
+        for (const src of this.activeSources) {
+          try {
+            src.stop();
+            src.disconnect();
+          } catch (e) {}
+        }
+        this.activeSources = [];
+        if (this.audioCtx) {
+          this.nextTime = this.audioCtx.currentTime;
+        }
+      }
+      stop() {
+        this.flush();
+        if (this.audioCtx) {
+          this.audioCtx.close().catch(() => {});
+          this.audioCtx = null;
+        }
+        this.nextTime = 0;
+      }
+    }
+
+    const player = new PcmPlayer(24000);
+
+    // Audio Resampler: hardware inRate -> exact 16000 Hz Int16 PCM
+    function downsampleTo16k(buffer, inSampleRate) {
+      if (inSampleRate === 16000) {
+        const len = buffer.length;
+        const result = new Int16Array(len);
+        for (let i = 0; i < len; i++) {
+          result[i] = Math.max(-32768, Math.min(32767, buffer[i] * 32768));
+        }
+        return result;
+      }
+      const sampleRateRatio = inSampleRate / 16000;
+      const newLength = Math.round(buffer.length / sampleRateRatio);
+      const result = new Int16Array(newLength);
+      let offsetResult = 0;
+      let offsetBuffer = 0;
+      while (offsetResult < result.length) {
+        const nextOffsetBuffer = Math.round((offsetResult + 1) * sampleRateRatio);
+        let accum = 0, count = 0;
+        for (let i = offsetBuffer; i < nextOffsetBuffer && i < buffer.length; i++) {
+          accum += buffer[i];
+          count++;
+        }
+        const sample = count > 0 ? accum / count : 0;
+        result[offsetResult] = Math.max(-32768, Math.min(32767, sample * 32768));
+        offsetResult++;
+        offsetBuffer = nextOffsetBuffer;
+      }
+      return result;
+    }
+
+    // Microphone Input Streamer
+    let micStream = null;
+    let micContext = null;
+    let micProcessor = null;
+
+    async function initMicrophone() {
+      try {
+        console.log('[MIC] Requesting microphone access...');
+        micStream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            channelCount: 1,
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true
+          }
+        });
+        console.log('[MIC] Microphone permission GRANTED');
+
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        micContext = new AudioCtx();
+        if (micContext.state === 'suspended') await micContext.resume();
+
+        const actualSampleRate = micContext.sampleRate;
+        console.log('[MIC] Hardware Sample Rate:', actualSampleRate);
+
+        const source = micContext.createMediaStreamSource(micStream);
+        micProcessor = micContext.createScriptProcessor(4096, 1, 1);
+
+        source.connect(micProcessor);
+        micProcessor.connect(micContext.destination);
+
+        micProcessor.onaudioprocess = (e) => {
+          if (ws && ws.readyState === WebSocket.OPEN) {
+            const inputFloat32 = e.inputBuffer.getChannelData(0);
+            const pcm16k = downsampleTo16k(inputFloat32, actualSampleRate);
+
+            const bytes = new Uint8Array(pcm16k.buffer);
+            let binary = '';
+            for (let i = 0; i < bytes.length; i++) {
+              binary += String.fromCharCode(bytes[i]);
+            }
+            const base64 = btoa(binary);
+            ws.send(JSON.stringify({ type: 'input.audio', audio: base64 }));
+          }
+        };
+      } catch (err) {
+        console.error('[MIC] Error:', err);
+        alert('Microphone access is required: ' + err.message);
+      }
+    }
+
+    function stopMicrophone() {
+      if (micProcessor) {
+        micProcessor.disconnect();
+        micProcessor = null;
+      }
+      if (micContext) {
+        micContext.close().catch(() => {});
+        micContext = null;
+      }
+      if (micStream) {
+        micStream.getTracks().forEach(t => t.stop());
+        micStream = null;
+      }
+    }
+
+    function startTimer() {
+      startTime = Date.now();
+      timerHandle = setInterval(() => $('timer').textContent = elapsed(), 250);
+    }
+    function stopTimer() {
+      if (timerHandle) clearInterval(timerHandle);
+      timerHandle = null;
+    }
+
+    let lastAgentBubble = null;
+    let lastUserBubble = null;
+
+    function addBubble(speaker, text) {
+      if (!text || !text.trim()) return;
+      const box = document.getElementById('conversation');
+      const el = document.createElement('div');
+      el.className = 'bubble ' + (speaker === 'AI' ? 'ai' : 'prospect');
+      el.innerHTML = `<div class="speaker">${speaker === 'AI' ? 'AI Sales Agent (AssemblyAI)' : 'Prospect (You)'}</div>${text}`;
+      box.appendChild(el);
+      box.scrollTop = box.scrollHeight;
+      if (speaker === 'AI') lastAgentBubble = el;
+      else lastUserBubble = el;
+    }
+
+    function updateIntelligence(intent, qual, signal, score, next) {
+      if (intent) $('siIntent').textContent = intent;
+      if (qual) $('siQual').textContent = qual;
+      if (signal) $('siSignal').textContent = signal;
+      if (score) $('siScore').textContent = score;
+      if (next) $('siNext').textContent = next;
+    }
+
+    $('answerBtn').addEventListener('click', async () => {
+      try {
+        // 1. Synchronously unlock speaker AudioContext
+        player.init();
+
+        show('live');
+        setHeader('Connecting', '');
+        startTimer();
+
+        // 2. Prompt for microphone synchronously on click
+        await initMicrophone();
+
+        // 3. Request session & connect WebSocket
+        const res = await fetch('/api/session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            lead_name: $('incomingName')?.textContent || 'Oussema Toumi',
+            company: $('incomingCompany')?.textContent || 'Demo Company',
+            product: $('incomingProduct')?.textContent || 'VoxSales Professional'
+          })
+        });
+        if (!res.ok) throw new Error('Session request failed: ' + res.status);
+        const session = await res.json();
+
+        const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${proto}//${location.host}/media/browser`;
+        console.log('[Client] Connecting to WebSocket:', wsUrl);
+
+        ws = new WebSocket(wsUrl);
+
+        ws.addEventListener('open', () => {
+          console.log('[Client] Voice Agent WebSocket connected');
+          setHeader('Live', 'live');
+          updateIntelligence('High Interest', 'Live Voice Discovery', 'Two-Way Voice Stream', '88/100', 'AI Greeting Prospect');
+          addBubble('AI', 'Hi Oussema, this is Alex from VoxSales. Thanks for connecting! How is your day going?');
+        });
+
+        ws.addEventListener('message', (event) => {
+          try {
+            const msg = JSON.parse(event.data);
+
+            // 1. SEMANTIC BARGE-IN: If user begins speaking, instantly cut off AI speech output
+            if (msg.type === 'input.speech.started') {
+              console.log('[Barge-In] User started speaking, stopping agent audio immediately.');
+              player.flush();
+              setHeader('Listening to You...', 'live');
+            } else if (msg.type === 'reply.done' && msg.status === 'interrupted') {
+              console.log('[Interrupted] Agent reply interrupted, flushing audio.');
+              player.flush();
+              setHeader('Listening to You...', 'live');
+            } else if (msg.type === 'input.speech.stopped') {
+              setHeader('Thinking...', 'live');
+            }
+
+            // 2. Playback live audio chunks from AssemblyAI Voice Agent
+            if (msg.type === 'audio' && msg.data) {
+              player.playBase64(msg.data);
+            } else if (msg.type === 'reply.audio' && msg.data) {
+              player.playBase64(msg.data);
+            } else if (msg.data && typeof msg.data === 'string' && msg.data.length > 50) {
+              player.playBase64(msg.data);
+            }
+
+            // 3. Handle live transcripts & speech events
+            if (msg.type === 'transcript.user' && msg.text) {
+              addBubble('Prospect', msg.text);
+              updateIntelligence('Evaluating Solution', 'Requirements Discussed', 'High Buying Signal', '92/100', 'Answer Question');
+            } else if (msg.type === 'transcript.agent' && msg.text) {
+              addBubble('AI', msg.text);
+            } else if (msg.type === 'Turn' && msg.turn?.transcript) {
+              addBubble(msg.turn?.role === 'user' ? 'Prospect' : 'AI', msg.turn.transcript);
+            } else if (msg.type === 'reply.started') {
+              setHeader('AI Speaking', 'live');
+            } else if (msg.type === 'reply.done' && msg.status !== 'interrupted') {
+              setHeader('Listening to You...', 'live');
+            } else if (msg.type === 'session.ready') {
+              setHeader('Listening to You...', 'live');
+            } else if (msg.type === 'tool_executed') {
+              console.log('[Tool Executed]', msg.tool, msg.data);
+              if (msg.tool === 'book_demo' && msg.data) {
+                updateIntelligence('Demo Scheduled', 'BANT Qualified', 'High Buying Signal', '98/100', 'Demo Confirmed');
+                addBubble('System', '📅 Live Demo Booked: ' + msg.data.meeting_time + ' (Telegram Alert Sent to Team)');
+              } else if (msg.tool === 'qualify_lead' && msg.data) {
+                updateIntelligence('Qualified', 'BANT Captured', 'Active Opportunity', '95/100', 'Closing Next Step');
+              }
+            } else if (msg.type === 'Termination') {
+              endCall();
+            }
+          } catch (e) {
+            console.error('[WS] Parse error:', e);
+          }
+        });
+
+        ws.addEventListener('close', (e) => {
+          console.log('[Client] WebSocket closed:', e.code, e.reason);
+          endCall();
+        });
+
+        ws.addEventListener('error', (err) => {
+          console.error('[Client] WebSocket error:', err);
+          setHeader('Error', 'warn');
+        });
+      } catch (e) {
+        console.error('[Client] Answer Call error:', e);
+        setHeader('Error', 'warn');
+      }
+    });
+
+    function endCall() {
+      stopTimer();
+      stopMicrophone();
+      player.stop();
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'session.end' }));
+        ws.close();
+      }
+      setHeader('Completed', 'success');
+      show('completed');
+      $('sumScore').textContent = '94/100';
+      $('sumIntent').textContent = 'Strong Purchase Intent';
+      $('sumNext').textContent = 'Schedule Custom Onboarding Demo';
+    }
+
+    $('endBtn').addEventListener('click', endCall);
+    $('newCallBtn').addEventListener('click', () => {
+      setHeader('Idle', '');
+      show('incoming');
+    });
+  </script>
+</body>
+</html>

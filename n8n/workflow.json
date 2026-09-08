@@ -1,0 +1,889 @@
+{
+  "name": "AI Sales Agent CRM \u2014 Phone/WhatsApp/Telegram + AssemblyAI + Airtable",
+  "nodes": [
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.fields?.['Preferred Contact Channel'] ?? $json['Preferred Contact Channel'] ?? $json['Preferred Channel'] }}",
+                    "operator": {
+                      "operation": "equals",
+                      "type": "string"
+                    },
+                    "rightValue": "Phone",
+                    "id": "21df974d-a655-466e-9182-3adf698897f7"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.fields?.['Preferred Contact Channel'] ?? $json['Preferred Contact Channel'] ?? $json['Preferred Channel'] }}",
+                    "operator": {
+                      "operation": "equals",
+                      "type": "string"
+                    },
+                    "rightValue": "WhatsApp",
+                    "id": "ebb67eda-8a3f-48cb-a972-7196f41d02d7"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.fields?.['Preferred Contact Channel'] ?? $json['Preferred Contact Channel'] ?? $json['Preferred Channel'] }}",
+                    "operator": {
+                      "operation": "equals",
+                      "type": "string"
+                    },
+                    "rightValue": "Telegram",
+                    "id": "82180ac2-cbbe-400a-8133-c317848dbf1c"
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "Unsupported"
+        }
+      },
+      "id": "08bec7f9-6f0b-48ea-8679-90927e725c8c",
+      "name": "Route by Preferred Channel",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        -688,
+        752
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://172.17.0.1:8085/api/dial",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"to\": \"{{ ($json.fields?.['Phone'] ?? $json['Phone'] ?? '').replace(/[^\\d+]/g, '') }}\",\n  \"from\": \"+21692801110\",\n  \"lead_id\": \"{{ $json.id }}\",\n  \"lead_name\": \"{{ $json.fields?.['Lead Name'] ?? 'Prospect' }}\",\n  \"company\": \"{{ $json.fields?.['Company']?.[0] ?? 'N/A' }}\"\n}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "8bf1f011-1189-473e-959e-a0cadca29de8",
+      "name": "Initiate outbound phone call",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -368,
+        592
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.assemblyai.com/v1/llm/gateway/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer 58423923a4a640a5a66b44615bc528da"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"mistral-large-latest\",\n  \"messages\": [\n    {\"role\": \"system\", \"content\": \"You are Assembly AI Sales Mind powered by Mistral AI. Keep replies concise, persuasive, and helpful. Qualify lead budget, timeline, authority, and need. Offer next steps.\"},\n    {\"role\": \"user\", \"content\": \"Lead Name: {{ $json.fields?.['Lead Name'] ?? 'Prospect' }}, Notes: {{ $json.fields?.['Notes'] ?? 'Interested in product' }}\"}\n  ],\n  \"temperature\": 0.2\n}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "c76e8855-024b-4006-b9a6-834fc9b6e743",
+      "name": "Initiate WhatsApp outreach",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -416,
+        768
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "inbound-sales-event",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "feb9782d-baae-4b2a-97d4-40ea03f483fe",
+      "name": "Webhook: inbound sales event",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        32,
+        912
+      ],
+      "webhookId": "ef0421dd-60ca-4c88-8e1d-dbb8c946ae07"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "post-call-analysis",
+        "options": {}
+      },
+      "id": "9fa10bd9-39af-49d4-8039-2fee509e8699",
+      "name": "Webhook: post-call analysis",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -416,
+        1136
+      ],
+      "webhookId": "7ec8105e-44f4-4643-97f1-45305e2ab76e"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "source",
+              "name": "source",
+              "type": "string",
+              "value": "={{ $json.body?.source ?? $json.source ?? 'webhook' }}"
+            },
+            {
+              "id": "from",
+              "name": "from",
+              "type": "string",
+              "value": "={{ $json.body?.from_number ?? $json.body?.from ?? $json.from ?? '' }}"
+            },
+            {
+              "id": "text",
+              "name": "text",
+              "type": "string",
+              "value": "={{ $json.body?.text ?? $json.body?.transcript ?? $json.text ?? '' }}"
+            },
+            {
+              "id": "leadId",
+              "name": "leadId",
+              "type": "string",
+              "value": "={{ $json.body?.lead_id ?? $json.lead_id ?? '' }}"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "28106b91-b9f8-49d3-8fc6-a2d25b205ea1",
+      "name": "Normalize inbound payload",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        256,
+        912
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"status\": \"accepted\",\n  \"source\": \"{{ $json.source }}\",\n  \"lead_lookup\": {{ $json['Leads'] ? 'true' : 'false' }}\n}",
+        "options": {}
+      },
+      "id": "52267162-30b4-4e35-974c-bb6a41afb8aa",
+      "name": "Ack inbound event",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        704,
+        912
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "event-type",
+              "leftValue": "={{ $json.body?.event ?? $json.event }}",
+              "operator": {
+                "operation": "equals",
+                "type": "string"
+              },
+              "rightValue": "call_analyzed"
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          }
+        },
+        "options": {}
+      },
+      "id": "f24e1611-1969-446e-8b26-a6520c6f92a7",
+      "name": "Filter analyzed calls only",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        -192,
+        1136
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "8860893679",
+        "text": "=POST-CALL SALES ANALYSIS\n\nProspect: {{ $('Webhook: post-call analysis').item.json.body?.call?.retell_llm_dynamic_variables?.name ?? $('Webhook: post-call analysis').item.json.body?.lead_name ?? $('Webhook: post-call analysis').item.json.lead_name ?? 'Prospect' }}\nCompany: {{ $('Webhook: post-call analysis').item.json.body?.call?.retell_llm_dynamic_variables?.company ?? $('Webhook: post-call analysis').item.json.company ?? 'N/A' }}\nProduct: {{ $('Webhook: post-call analysis').item.json.body?.call?.retell_llm_dynamic_variables?.product ?? $('Webhook: post-call analysis').item.json.product ?? 'VoxSales' }}\n\nAI ANALYSIS\n{{ JSON.stringify($('Parse Sales Analysis JSON').item.json.output ?? {}, null, 2) }}\n\nTRANSCRIPT\n{{ $('Webhook: post-call analysis').item.json.body?.call?.transcript ?? $('Webhook: post-call analysis').item.json.transcript ?? '' }}",
+        "additionalFields": {
+          "disable_web_page_preview": true
+        }
+      },
+      "id": "b2a6bd0b-bcaa-47da-bfed-2b923ca76375",
+      "name": "Notify salesperson on Telegram - Call Analysis",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1056,
+        1136
+      ],
+      "webhookId": "79d30ccc-4194-4e6a-9b70-52d609a84441",
+      "credentials": {
+        "telegramApi": {
+          "id": "YoGvpk20roqp0k0U",
+          "name": "Assembly"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "authentication": "airtableOAuth2Api",
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "mode": "id",
+          "value": "appekwHwZWwluxvEh"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "id",
+          "value": "tblJBJEIq1zgLeMoA"
+        },
+        "filterByFormula": "=OR({Phone}='{{ $json.from }}',{WhatsApp}='{{ $json.from }}',{Telegram ID}='{{ $json.from }}')",
+        "returnAll": false,
+        "options": {}
+      },
+      "id": "bd5d31e8-40b3-494c-a5d3-58942f324076",
+      "name": "Lookup lead in Airtable",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        480,
+        912
+      ],
+      "credentials": {
+        "airtableOAuth2Api": {
+          "id": "uOHr5oq3LvY1fTk4",
+          "name": "Ai Airtable"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "airtableOAuth2Api",
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "mode": "id",
+          "value": "appekwHwZWwluxvEh"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "id",
+          "value": "tblJBJEIq1zgLeMoA"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": true,
+              "display": true,
+              "displayName": "id",
+              "id": "id",
+              "removed": false,
+              "required": true,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": false,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "Last Call Summary",
+              "id": "Last Call Summary",
+              "removed": false,
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": false,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "Status",
+              "id": "Status",
+              "removed": false,
+              "required": false,
+              "type": "string"
+            }
+          ],
+          "value": {
+            "Last Call Summary": "={{ (($('Parse Sales Analysis JSON').item.json.output?.summary ?? '') + '\\n\\nQualification:\\n' + JSON.stringify($('Parse Sales Analysis JSON').item.json.output ?? {}, null, 2)).trim() }}",
+            "Status": "Contacted",
+            "id": "={{ $json.id }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "4a60e773-61ca-4e1e-afba-41386beafab7",
+      "name": "Update lead in Airtable",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        832,
+        1136
+      ],
+      "credentials": {
+        "airtableOAuth2Api": {
+          "id": "uOHr5oq3LvY1fTk4",
+          "name": "Ai Airtable"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ String($json.fields?.['Telegram ID'] ?? '').trim() }}",
+        "text": "=Hi {{ $json.fields?.['Lead Name'] ?? 'Prospect' }}, this is Alex from VoxSales. The fastest way to see how VoxSales works is a short voice demo: https://voice.secopsai.dpdns.org/",
+        "additionalFields": {}
+      },
+      "id": "0896abd2-9916-4b76-bc13-5a7dd6d31966",
+      "name": "Initiate Telegram outreach",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -400,
+        976
+      ],
+      "webhookId": "08a08a54-29a2-48e4-92fe-b3fa3e7084eb",
+      "credentials": {
+        "telegramApi": {
+          "id": "zL6UnfFtgZj6HMCs",
+          "name": "leads"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "airtableOAuth2Api",
+        "base": {
+          "__rl": true,
+          "mode": "id",
+          "value": "appekwHwZWwluxvEh"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "id",
+          "value": "tblJBJEIq1zgLeMoA"
+        },
+        "id": "={{ $json.body?.record_id ?? $json.body?.recordId ?? $json.record_id ?? $json.recordId ?? '' }}",
+        "options": {}
+      },
+      "id": "2c8cbb35-0362-4e93-a9aa-c3035082ad89",
+      "name": "Get lead record for instant trigger",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        -912,
+        784
+      ],
+      "credentials": {
+        "airtableOAuth2Api": {
+          "id": "uOHr5oq3LvY1fTk4",
+          "name": "Ai Airtable"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Analyze the following sales call transcript and context:\n\nLead Name: {{ $json.body?.call?.retell_llm_dynamic_variables?.name ?? $json.lead_name ?? $json.fields?.['Lead Name'] ?? 'Prospect' }}\nCompany: {{ $json.body?.call?.retell_llm_dynamic_variables?.company ?? $json.company ?? $json.fields?.['Company']?.[0] ?? 'N/A' }}\nProduct: {{ $json.body?.call?.retell_llm_dynamic_variables?.product ?? $json.product ?? 'VoxSales' }}\nTranscript: {{ $json.body?.call?.transcript ?? $json.transcript ?? $json.fields?.['Notes'] ?? '' }}",
+        "options": {
+          "systemMessage": "You are an expert B2B Sales Qualification Analyst. Analyze ONLY the supplied sales call. Do not invent facts. If Budget, Authority, Need, or Timeline is not stated, use exactly \"Not stated\". Return ONLY valid JSON, with no markdown or code fences, using exactly these keys: summary, budget, authority, need, timeline, sentiment, objections, sales_score, next_action. sales_score must be a number from 0 to 100. objections must be an array of concise strings; use an empty array when none are stated. next_action must be a concrete sales follow-up based only on the call."
+        }
+      },
+      "id": "f34f4acc-eadc-428e-9d6d-f7edabdd7dd0",
+      "name": "Analyze call with Gemini AI",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        32,
+        1136
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "airtableOAuth2Api",
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "mode": "id",
+          "value": "appekwHwZWwluxvEh"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "id",
+          "value": "tblJBJEIq1zgLeMoA"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": true,
+              "display": true,
+              "displayName": "id",
+              "id": "id",
+              "removed": false,
+              "required": true,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": false,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "Status",
+              "id": "Status",
+              "removed": false,
+              "required": false,
+              "type": "string"
+            }
+          ],
+          "value": {
+            "Status": "Contacted",
+            "id": "={{ $('Route by Preferred Channel').item.json.id }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "f6d8a685-7f23-4dbb-b6f0-0383fba0c28a",
+      "name": "Mark lead as Contacted",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        -240,
+        784
+      ],
+      "credentials": {
+        "airtableOAuth2Api": {
+          "id": "uOHr5oq3LvY1fTk4",
+          "name": "Ai Airtable"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "ministral-14b-latest",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatMistralCloud",
+      "typeVersion": 1,
+      "position": [
+        -64,
+        1312
+      ],
+      "id": "cbda33f8-8301-4a6d-b32e-7b392cec720a",
+      "name": "Mistral Cloud Chat Model",
+      "credentials": {
+        "mistralCloudApi": {
+          "id": "NIhQgFYRBuzND2EC",
+          "name": "Mistral Cloud account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $json.output ?? $json.text ?? $json.response ?? '';\nlet parsed;\ntry {\n  parsed = typeof raw === 'object' ? raw : JSON.parse(String(raw).replace(/^```json\\s*/i, '').replace(/\\s*```$/i, '').trim());\n} catch (e) {\n  const match = String(raw).match(/\\{[\\s\\S]*\\}/);\n  if (!match) throw new Error('AI analysis did not return valid JSON');\n  parsed = JSON.parse(match[0]);\n}\nreturn [{ json: { ...$json, output: parsed } }];"
+      },
+      "id": "e79080d3-63e5-441e-a7c0-e5f6a079974d",
+      "name": "Parse Sales Analysis JSON",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        384,
+        1136
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "airtableOAuth2Api",
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "mode": "id",
+          "value": "appekwHwZWwluxvEh"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "id",
+          "value": "tblJBJEIq1zgLeMoA"
+        },
+        "filterByFormula": "={Lead Name}='{{ $('Webhook: post-call analysis').item.json.body?.lead_name ?? $('Webhook: post-call analysis').item.json.lead_name ?? '' }}'",
+        "returnAll": false,
+        "options": {}
+      },
+      "id": "de697b57-5833-4543-9daa-9d40b66c80f8",
+      "name": "Resolve lead record for call analysis",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        608,
+        1136
+      ],
+      "credentials": {
+        "airtableOAuth2Api": {
+          "id": "uOHr5oq3LvY1fTk4",
+          "name": "Ai Airtable"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "airtable-new-qualified-lead",
+        "options": {
+          "noResponseBody": true
+        }
+      },
+      "id": "6c4f0b7b-5b0f-4d5c-9d0c-6a0d4e8e7f21",
+      "name": "Webhook: Airtable new qualified lead",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -1136,
+        784
+      ],
+      "webhookId": "49b95f9f-a042-45fc-9b0b-a4d0cba6b57c"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "099f6008-2094-4884-bdc7-9f8d8fe9eded",
+      "name": "Schedule: poll Airtable new leads",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -1136,
+        544
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "airtableOAuth2Api",
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "mode": "id",
+          "value": "appekwHwZWwluxvEh"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "id",
+          "value": "tblJBJEIq1zgLeMoA"
+        },
+        "filterByFormula": "=AND({Status}='New',OR({Preferred Contact Channel}='Phone',{Preferred Contact Channel}='WhatsApp',{Preferred Contact Channel}='Telegram'))",
+        "options": {}
+      },
+      "id": "4a6f3b7c-0c7e-4c43-a6a6-5f8f5a4f4d91",
+      "name": "Get new leads from Airtable",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        -912,
+        544
+      ],
+      "credentials": {
+        "airtableOAuth2Api": {
+          "id": "uOHr5oq3LvY1fTk4",
+          "name": "Ai Airtable"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Route by Preferred Channel": {
+      "main": [
+        [
+          {
+            "node": "Initiate outbound phone call",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Initiate WhatsApp outreach",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Initiate Telegram outreach",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook: inbound sales event": {
+      "main": [
+        [
+          {
+            "node": "Normalize inbound payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook: post-call analysis": {
+      "main": [
+        [
+          {
+            "node": "Filter analyzed calls only",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize inbound payload": {
+      "main": [
+        [
+          {
+            "node": "Lookup lead in Airtable",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lookup lead in Airtable": {
+      "main": [
+        [
+          {
+            "node": "Ack inbound event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update lead in Airtable": {
+      "main": [
+        [
+          {
+            "node": "Notify salesperson on Telegram - Call Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter analyzed calls only": {
+      "main": [
+        [
+          {
+            "node": "Analyze call with Gemini AI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Initiate outbound phone call": {
+      "main": [
+        [
+          {
+            "node": "Mark lead as Contacted",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Initiate WhatsApp outreach": {
+      "main": [
+        [
+          {
+            "node": "Mark lead as Contacted",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Initiate Telegram outreach": {
+      "main": [
+        [
+          {
+            "node": "Mark lead as Contacted",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mistral Cloud Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Analyze call with Gemini AI",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze call with Gemini AI": {
+      "main": [
+        [
+          {
+            "node": "Parse Sales Analysis JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Sales Analysis JSON": {
+      "main": [
+        [
+          {
+            "node": "Resolve lead record for call analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resolve lead record for call analysis": {
+      "main": [
+        [
+          {
+            "node": "Update lead in Airtable",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook: Airtable new qualified lead": {
+      "main": [
+        [
+          {
+            "node": "Get lead record for instant trigger",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get lead record for instant trigger": {
+      "main": [
+        [
+          {
+            "node": "Route by Preferred Channel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule: poll Airtable new leads": {
+      "main": [
+        [
+          {
+            "node": "Get new leads from Airtable",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get new leads from Airtable": {
+      "main": [
+        [
+          {
+            "node": "Route by Preferred Channel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": true,
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner"
+  }
+}

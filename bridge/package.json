@@ -1,0 +1,17 @@
+{
+  "name": "telnyx-assemblyai-voice-bridge",
+  "version": "1.0.0",
+  "description": "Telnyx Call Control + AssemblyAI Voice Agent real-time bidirectional audio bridge",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@ricky0123/vad-web": "^0.0.30",
+    "axios": "^1.7.2",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "mime-types": "^3.0.2",
+    "ws": "^8.18.0"
+  }
+}
