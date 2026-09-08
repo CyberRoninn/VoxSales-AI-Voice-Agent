@@ -111,24 +111,22 @@
       "parameters": {
         "method": "POST",
         "url": "https://api.assemblyai.com/v1/llm/gateway/chat/completions",
-        "sendHeaders": true,
+        "sendHeaders": false,
         "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "=Bearer 58423923a4a640a5a66b44615bc528da"
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
+          "parameters": []
         },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={\n  \"model\": \"mistral-large-latest\",\n  \"messages\": [\n    {\"role\": \"system\", \"content\": \"You are Assembly AI Sales Mind powered by Mistral AI. Keep replies concise, persuasive, and helpful. Qualify lead budget, timeline, authority, and need. Offer next steps.\"},\n    {\"role\": \"user\", \"content\": \"Lead Name: {{ $json.fields?.['Lead Name'] ?? 'Prospect' }}, Notes: {{ $json.fields?.['Notes'] ?? 'Interested in product' }}\"}\n  ],\n  \"temperature\": 0.2\n}",
         "options": {
           "timeout": 30000
+        },
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "credentials": {
+          "httpHeaderAuth": {
+            "name": "Header Auth account"
+          }
         }
       },
       "id": "c76e8855-024b-4006-b9a6-834fc9b6e743",
